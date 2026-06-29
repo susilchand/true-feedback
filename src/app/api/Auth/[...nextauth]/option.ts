@@ -1,14 +1,12 @@
 import { NextAuthOptions } from "next-auth";
-import CrendentialsProvider from "next-auth/providers/credentials";
-
+import CredentialsProvider from "next-auth/providers/credentials"; // Fixed typo
 import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/dbConnect";
 import UserModel from "@/model/User";
-import { email } from "zod";
 
 export const authOptions: NextAuthOptions = {
     providers: [
-        CrendentialsProvider({
+        CredentialsProvider({ 
             id: "credentials",
             name: "Credentials",
             credentials: {
@@ -16,62 +14,72 @@ export const authOptions: NextAuthOptions = {
                 password: { label: "Password", type: "password" }
             },
             async authorize(credentials: any): Promise<any> {
-                // Implementation for authorizing user
                 await dbConnect();
                 try {
+                    // Fixed: use credentials.email instead of credentials.identifier
                     const user = await UserModel.findOne({
                         $or: [
-                            { email: credentials.identifier },
-                            { username: credentials.identifier }
+                            { email: credentials?.email },
+                            { username: credentials?.email } // Using email for username search too
                         ]
-                    })
+                    });
+                    
                     if (!user) {
                         throw new Error("User not found");
-
-
                     }
+                    
                     if (!user.isVerified) {
                         throw new Error("User is not verified");
                     }
-                    const isPasswordCorrect = await bcrypt.compare(credentials.password, user.password);
+                    
+                    const isPasswordCorrect = await bcrypt.compare(
+                        credentials?.password || "", 
+                        user.password
+                    );
+                    
                     if (isPasswordCorrect) {
-                        return user;
+                        return {
+                            id: user._id.toString(),
+                            _id: user._id.toString(),
+                            email: user.email,
+                            username: user.username,
+                            isVerified: user.isVerified,
+                            isAcceptingMessage: user.isAcceptingMessage,
+                        };
                     } else {
                         throw new Error("Invalid password");
                     }
                 } catch (err: any) {
-                    throw new Error(err)
+                    throw new Error(err.message || "Authentication failed");
                 }
             }
-        }
-        )],
+        })
+    ],
     callbacks: {
         async session({ session, token }) {
             if (token) {
-                session.user._id = token._id;
-                session.user.isVerified = token.isVerified;
-                session.user.isAcceptingMessage = token.isAcceptingMessage;
-                session.user.username = token.username;
+                session.user._id = token._id as string;
+                session.user.isVerified = token.isVerified as boolean;
+                session.user.isAcceptingMessage = token.isAcceptingMessage as boolean;
+                session.user.username = token.username as string;
             }
-
-            return session
+            return session;
         },
         async jwt({ token, user }) {
             if (user) {
-                token._id = user._id?.toString()
+                token._id = user._id?.toString();
                 token.isVerified = user.isVerified;
                 token.isAcceptingMessage = user.isAcceptingMessage;
                 token.username = user.username;
             }
-            return token
+            return token;
         }
     },
     pages: {
         signIn: "/sign-in",
-        
     },
     session: {
         strategy: "jwt",
     },
     secret: process.env.NEXTAUTH_SECRET,
-}
+};

@@ -8,6 +8,8 @@ const checkUsernameSchema = z.object({
 })
 
 export async function GET(req: Request) {
+
+
     await dbConnect();
     
     try {
@@ -18,13 +20,13 @@ export async function GET(req: Request) {
         //validate with zod
         const result =checkUsernameSchema.safeParse(queryParam);
 
-        console.log(result)
+        console.log(result) //ToDo remove
 
         if (!result.success) {
             const usernameErrors = result.error.format().username?._errors || [];
             return Response.json({
                 success: false,
-                message: usernameErrors?.length ? usernameErrors[0] : "Invalid username"
+                message: usernameErrors?.length > 0 ? usernameErrors.join(', ') : "Invalid query parameters"
             },{
                 status: 400
             })
@@ -34,7 +36,7 @@ export async function GET(req: Request) {
         if (existingVerifiedUser) {
             return Response.json({
                 success: false,
-                message: "Username is not unique."
+                message: "Username is already taken"
             }, {
                 status: 409
             });

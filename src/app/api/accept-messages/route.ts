@@ -5,7 +5,7 @@ import { User } from "next-auth";
 import UserModel from "@/model/User";
 
 export async function POST(req: Request) {
-    await dbConnect;
+    await dbConnect();
     const session = await getServerSession(authOptions)
     const user: User = session?.user
     if (!session || !session.user) {
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
 
-    await dbConnect;
+    await dbConnect();
     const session = await getServerSession(authOptions)
     const user: User = session?.user
     if (!session || !session.user) {

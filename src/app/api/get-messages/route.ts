@@ -42,7 +42,12 @@ export async function GET(req: Request) {
             status: 200
         });
     } catch (error) {
-
+         return Response.json({
+            success: false,
+            message: "Not Authenticated"
+        }, {
+            status: 500
+        });
     }
 
 }
